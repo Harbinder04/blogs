@@ -1,0 +1,60 @@
+# .github/workflows/upload-images.yml
+name: Upload Images to Cloudinary
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'blogs/**/images/**'   # only triggers when images change
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2          # need previous commit to diff
+
+      - name: Get changed image files
+        id: changed
+        run: |
+          git diff --name-only HEAD~1 HEAD -- 'blogs/**/images/**' > changed_files.txt
+          cat changed_files.txt
+
+      - name: Upload to Cloudinary
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          pip install cloudinary
+          python3 << 'EOF'
+          import cloudinary
+          import cloudinary.uploader
+          import os
+
+          cloudinary.config(
+            cloud_name=os.environ['CLOUDINARY_CLOUD_NAME'],
+            api_key=os.environ['CLOUDINARY_API_KEY'],
+            api_secret=os.environ['CLOUDINARY_API_SECRET']
+          )
+
+          with open('changed_files.txt') as f:
+            files = [l.strip() for l in f if l.strip()]
+
+          for filepath in files:
+            # blogs/science-fiction/images/header.jpg
+            # becomes public_id: blogs/science-fiction/header
+            parts = filepath.replace('blogs/', '').split('/')
+            folder = parts[0]
+            filename = os.path.splitext(parts[-1])[0]
+            public_id = f"blogs/{folder}/{filename}"
+
+            result = cloudinary.uploader.upload(
+              filepath,
+              public_id=public_id,
+              overwrite=True,
+              resource_type="image"
+            )
+            print(f"Uploaded: {result['secure_url']}")
+          EOF

@@ -1,0 +1,62 @@
+# .github/workflows/update-manifest.yml
+name: Update Manifest
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'blogs/**/blogContent.mdx'
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate manifest.json
+        run: |
+          python3 << 'EOF'
+          import os, json, re
+
+          blogs = []
+          for slug in os.listdir('blogs'):
+            mdx_path = f'blogs/{slug}/blogContent.mdx'
+            if not os.path.exists(mdx_path):
+              continue
+
+            with open(mdx_path) as f:
+              content = f.read()
+
+            # parse frontmatter between --- delimiters
+            match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if not match:
+              continue
+
+            fm = {}
+            for line in match.group(1).splitlines():
+              if ':' in line:
+                k, v = line.split(':', 1)
+                fm[k.strip()] = v.strip()
+
+            blogs.append({
+              "slug": slug,
+              "title": fm.get("title", "").strip('"'),
+              "date": fm.get("date", ""),
+              "excerpt": fm.get("excerpt", "").strip('"'),
+              "heroImage": fm.get("heroImage", "").strip('"'),
+              "tags": [t.strip() for t in fm.get("tags", "[]").strip("[]").split(",")]
+            })
+
+          blogs.sort(key=lambda p: p["date"], reverse=True)
+          with open('manifest.json', 'w') as f:
+            json.dump(blogs, f, indent=2)
+          print(f"Generated manifest with {len(blogs)} blogs")
+          EOF
+
+      - name: Commit manifest
+        run: |
+          git config user.name "harbinder04"
+          git config user.email ${{ secrets.USER_GITHUB_EMAIL }}
+          git add manifest.json
+          git diff --staged --quiet || git commit -m "chore: update manifest"
+          git push
