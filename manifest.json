@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "slug": "my-first-blog",
+    "title": "My First Blog Post",
+    "date": "2026-07-20",
+    "excerpt": "A simple demo post to test the blog layout, markdown rendering, and overall writing experience.",
+    "heroImage": "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80",
+    "tags": [
+      "Demo",
+      "Blogging",
+      "Markdown"
+    ]
+  }
+]
