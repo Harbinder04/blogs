@@ -2,6 +2,9 @@
 name: Update Manifest
 
 on:
+  workflow_run:
+    workflows: ["Upload Images to Cloudinary"]
+    types: [completed]
   push:
     branches: [master]
     paths:
@@ -9,6 +12,7 @@ on:
 
 jobs:
   manifest:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
